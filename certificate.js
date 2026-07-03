@@ -6,8 +6,11 @@
    In a later step, we will replace "sampleCertificates" with
    a live connection to your Google Sheet — nothing else on
    this page will need to change.
-   ========================================================= */
 
+   SheetDB column sequence (match this order in your Google Sheet):
+   Certificate Number | Student Name | Father Name | Course Name |
+   Issue Date | Date of Birth | Instructor | Status
+   ========================================================= */
 const sampleCertificates = [
   {
     certNo: "HQ-2026-00123",
@@ -15,7 +18,7 @@ const sampleCertificates = [
     father: "Muhammad Raza",
     course: "NEBOSH IGC",
     issueDate: "2026-05-10",
-    expiryDate: "2029-05-10",
+    dob: "2004-12-17",
     instructor: "John Hang",
     status: "Valid"
   },
@@ -25,7 +28,7 @@ const sampleCertificates = [
     father: "Imran Khan",
     course: "IOSH Managing Safely",
     issueDate: "2023-01-15",
-    expiryDate: "2026-01-15",
+    dob: "2004-12-17",
     instructor: "John Hang",
     status: "Expired"
   }
@@ -59,7 +62,7 @@ function showFound(cert) {
   document.getElementById('valCourse').textContent = cert.course;
   document.getElementById('valCertNo').textContent = cert.certNo;
   document.getElementById('valIssue').textContent = formatDate(cert.issueDate);
-  document.getElementById('valExpiry').textContent = cert.expiryDate ? formatDate(cert.expiryDate) : "No Expiry";
+  document.getElementById('valDob').textContent = cert.dob ? formatDate(cert.dob) : "N/A";
   document.getElementById('valInstructor').textContent = cert.instructor;
 
   document.getElementById('stName').textContent = cert.name;
@@ -81,7 +84,6 @@ function verifyCertificate(certNo) {
   if (!cleaned) return;
 
   const match = sampleCertificates.find(c => c.certNo.toUpperCase() === cleaned);
-
   if (match) {
     showFound(match);
   } else {
