@@ -1,17 +1,28 @@
 /* =========================================================
    certificate.js — Certificate Verification logic
-   ---------------------------------------------------------
-   This page is connected LIVE to your Google Sheet through
-   SheetDB. Any student you add in the Sheet becomes instantly
-   searchable here — no coding or re-upload needed.
+   LIVE DATA: connects to Google Sheet via SheetDB.
+   Sheet columns: Certificate Number | Student Name | Father Name |
+   Course Name | Issue Date | Date of Birth | Instructor | Status
    ========================================================= */
-
-// Your SheetDB API link (connected to "HiQual Certificates" Google Sheet)
 const SHEETDB_API_URL = "https://sheetdb.io/api/v1/nxwxkezee0ivo";
+
+function mapRowToCertificate(row) {
+  return {
+    certNo: row["Certificate Number"] || "",
+    name: row["Student Name"] || "",
+    father: row["Father Name"] || "",
+    course: row["Course Name"] || "",
+    issueDate: row["Issue Date"] || "",
+    dob: row["Date of Birth"] || "",
+    instructor: row["Instructor"] || "",
+    status: row["Status"] || ""
+  };
+}
 
 function formatDate(isoDate) {
   if (!isoDate) return "N/A";
   const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return isoDate;
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
@@ -19,8 +30,6 @@ function showEmpty() {
   document.getElementById('resultEmpty').style.display = 'block';
   document.getElementById('resultNotFound').style.display = 'none';
   document.getElementById('resultFound').style.display = 'none';
-  document.getElementById('resultEmpty').innerHTML =
-    '<i class="fa-solid fa-file-shield"></i><p>Certificate details will appear here after verification.</p>';
 }
 
 function showNotFound() {
@@ -39,12 +48,8 @@ function showFound(cert) {
   document.getElementById('valCourse').textContent = cert.course;
   document.getElementById('valCertNo').textContent = cert.certNo;
   document.getElementById('valIssue').textContent = formatDate(cert.issueDate);
-  document.getElementById('valExpiry').textContent = cert.expiryDate ? formatDate(cert.expiryDate) : "No Expiry";
+  document.getElementById('valDob').textContent = cert.dob ? formatDate(cert.dob) : "N/A";
   document.getElementById('valInstructor').textContent = cert.instructor;
-
-  document.getElementById('stName').textContent = cert.name;
-  document.getElementById('stName2').textContent = cert.name;
-  document.getElementById('stCourse').textContent = cert.course;
 
   const badge = document.getElementById('statusBadge');
   if (cert.status === "Valid") {
@@ -56,21 +61,27 @@ function showFound(cert) {
   }
 }
 
+const verifyBtn = document.getElementById('verifyBtn');
+const certInput = document.getElementById('certInput');
+
 function showLoading() {
-  document.getElementById('resultEmpty').style.display = 'block';
+  document.getElementById('resultEmpty').style.display = 'none';
   document.getElementById('resultNotFound').style.display = 'none';
   document.getElementById('resultFound').style.display = 'none';
-  document.getElementById('resultEmpty').innerHTML =
-    '<i class="fa-solid fa-spinner fa-spin"></i><p>Checking certificate, please wait...</p>';
+  if (verifyBtn) {
+    verifyBtn.disabled = true;
+    verifyBtn.dataset.originalText = verifyBtn.dataset.originalText || verifyBtn.innerHTML;
+    verifyBtn.innerHTML = 'Checking...';
+  }
 }
 
-// Works out Valid / Expired automatically by comparing ExpiryDate to today.
-// If ExpiryDate is empty, the certificate is treated as lifetime valid.
-function calculateStatus(expiryDate) {
-  if (!expiryDate || expiryDate.trim() === "") return "Valid";
-  const today = new Date();
-  const expiry = new Date(expiryDate);
-  return today > expiry ? "Expired" : "Valid";
+function resetButton() {
+  if (verifyBtn) {
+    verifyBtn.disabled = false;
+    if (verifyBtn.dataset.originalText) {
+      verifyBtn.innerHTML = verifyBtn.dataset.originalText;
+    }
+  }
 }
 
 async function verifyCertificate(certNo) {
@@ -80,36 +91,34 @@ async function verifyCertificate(certNo) {
   showLoading();
 
   try {
-    // Ask SheetDB to search the sheet for a matching CertificateNumber
-    const url = `${SHEETDB_API_URL}/search?CertificateNumber=${encodeURIComponent(cleaned)}`;
+    const url = SHEETDB_API_URL + "/search?Certificate%20Number=" + encodeURIComponent(cleaned);
     const response = await fetch(url);
-    const rows = await response.json();
+    if (!response.ok) throw new Error("Network response was not ok");
 
-    if (rows && rows.length > 0) {
-      const row = rows[0];
-      const cert = {
-        certNo: row.CertificateNumber,
-        name: row.StudentName,
-        father: row.FatherName,
-        course: row.CourseName,
-        issueDate: row.IssueDate,
-        expiryDate: row.ExpiryDate,
-        instructor: row.Instructor,
-        status: calculateStatus(row.ExpiryDate)
-      };
-      showFound(cert);
+    const rows = await response.json();
+    let matchRow = rows && rows.length > 0 ? rows[0] : null;
+
+    if (!matchRow) {
+      const allResponse = await fetch(SHEETDB_API_URL);
+      const allRows = await allResponse.json();
+      matchRow = allRows.find(function(r) {
+        return (r["Certificate Number"] || "").trim().toUpperCase() === cleaned;
+      });
+    }
+
+    resetButton();
+
+    if (matchRow) {
+      showFound(mapRowToCertificate(matchRow));
     } else {
       showNotFound();
     }
-  } catch (error) {
-    console.error("Verification error:", error);
+  } catch (err) {
+    console.error("Error fetching certificate data:", err);
+    resetButton();
     showNotFound();
   }
 }
-
-// ---------- Button click ----------
-const verifyBtn = document.getElementById('verifyBtn');
-const certInput = document.getElementById('certInput');
 
 if (verifyBtn && certInput) {
   verifyBtn.addEventListener('click', () => verifyCertificate(certInput.value));
@@ -118,8 +127,6 @@ if (verifyBtn && certInput) {
   });
 }
 
-// ---------- Auto-verify if opened via QR code link ----------
-// A QR code will link to: certificate.html?cert=HQ-2026-00123
 const urlParams = new URLSearchParams(window.location.search);
 const certFromQR = urlParams.get('cert');
 if (certFromQR) {
