@@ -3,147 +3,134 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Certificate Verification | HiQual United Kingdom Institute</title>
-<meta name="description" content="Verify the authenticity of a HiQual United Kingdom Institute HSE training certificate using the certificate number or QR code.">
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=EB+Garamond:wght@500;600&display=swap" rel="stylesheet">
+<title>Certificate Verification | HiQual</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="certificate.css">
+<style>
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f4f6f9;
+    margin: 0;
+    padding: 40px 20px;
+    color: #222;
+  }
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
+  h1 {
+    text-align: center;
+    font-size: 22px;
+    margin-bottom: 25px;
+  }
+  .input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+  }
+  #certInput {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 15px;
+  }
+  #verifyBtn {
+    padding: 12px 20px;
+    background: #1d4ed8;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+  }
+  #verifyBtn:hover { background: #1741b0; }
+  #verifyBtn:disabled { background: #93a5d1; cursor: not-allowed; }
+
+  #resultEmpty, #resultNotFound {
+    text-align: center;
+    color: #777;
+    padding: 20px 0;
+  }
+  #resultNotFound { color: #b91c1c; }
+
+  #resultFound { display: none; }
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+  }
+  .detail-label { color: #666; }
+  .detail-value { font-weight: 600; }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 15px;
+  }
+  .status-valid { background: #dcfce7; color: #15803d; }
+  .status-expired { background: #fee2e2; color: #b91c1c; }
+</style>
 </head>
 <body>
 
-<div class="hazard-strip"></div>
+<div class="container">
+  <h1>Certificate Verification</h1>
 
-<!-- ================= NAVIGATION ================= -->
-<header class="navbar" id="navbar">
-  <div class="container navbar-inner">
-    <a href="index.html" class="brand">
-      <img src="assets/images/logo.png" alt="HiQual United Kingdom Institute Logo" class="brand-logo">
-      <span class="brand-text">HiQual <strong>UK Institute</strong></span>
-    </a>
-    <nav class="nav-links" id="navLinks">
-      <a href="index.html#home">Home</a>
-      <a href="index.html#about">About</a>
-      <a href="index.html#services">Services</a>
-      <a href="courses.html">Courses</a>
-      <a href="certificate.html">Verify Certificate</a>
-      <a href="index.html#gallery">Gallery</a>
-      <a href="index.html#contact">Contact</a>
-    </nav>
-    <a href="certificate.html" class="btn btn-orange nav-cta">Verify Certificate</a>
-    <button class="menu-toggle" id="menuToggle" aria-label="Open menu"><span></span><span></span><span></span></button>
+  <div class="input-row">
+    <input type="text" id="certInput" placeholder="Enter Certificate Number (e.g. HQ-2026-00123)">
+    <button id="verifyBtn">Verify</button>
   </div>
-</header>
 
-<!-- ================= PAGE HEADER ================= -->
-<section class="page-hero">
-  <div class="container">
-    <p class="eyebrow" style="color:#FFC93C;"><i class="fa-solid fa-shield-halved"></i> Certificate Verification</p>
-    <h1>Check if a HiQual certificate is genuine</h1>
-    <p>Enter the certificate number exactly as printed on the document, or scan the QR code on the certificate, to see live verification results.</p>
+  <div id="resultEmpty">Enter a certificate number above to verify.</div>
+
+  <div id="resultNotFound" style="display:none;">
+    <i class="fa-solid fa-circle-xmark"></i> No certificate found with this number.
   </div>
-</section>
 
-<!-- ================= SEARCH BOX ================= -->
-<section class="section verify-search-section">
-  <div class="container">
-    <div class="verify-search-box">
-      <label for="certInput">Certificate Number</label>
-      <div class="search-row">
-        <input type="text" id="certInput" placeholder="e.g. HQ-2026-00123">
-        <button id="verifyBtn" class="btn btn-orange">Verify <i class="fa-solid fa-magnifying-glass"></i></button>
-      </div>
-      <p class="search-hint">Or scan the QR code printed on the certificate with your phone camera — it will open this page with the result automatically.</p>
+  <div id="resultFound">
+    <div id="statusBadge" class="status-badge"></div>
+
+    <div class="detail-row">
+      <span class="detail-label">Student Name</span>
+      <span class="detail-value" id="valName"></span>
     </div>
-
-    <!-- ================= RESULT: NOT SEARCHED YET ================= -->
-    <div id="resultEmpty" class="result-placeholder">
-      <i class="fa-solid fa-file-shield"></i>
-      <p>Certificate details will appear here after verification.</p>
+    <div class="detail-row">
+      <span class="detail-label">Father Name</span>
+      <span class="detail-value" id="valFather"></span>
     </div>
-
-    <!-- ================= RESULT: NOT FOUND ================= -->
-    <div id="resultNotFound" class="result-notfound" style="display:none;">
-      <i class="fa-solid fa-circle-xmark"></i>
-      <h3>Certificate Not Found</h3>
-      <p>We could not find a certificate matching this number. Please check the number and try again, or contact us if you believe this is an error.</p>
+    <div class="detail-row">
+      <span class="detail-label">Course</span>
+      <span class="detail-value" id="valCourse"></span>
     </div>
-
-    <!-- ================= RESULT: FOUND (Certificate Box) ================= -->
-    <div id="resultFound" class="cert-box" style="display:none;">
-
-      <p class="cert-thankyou">Thank you for using the HiQual verifications service.</p>
-
-      <div class="cert-header">
-        <img src="assets/images/logo.png" alt="HiQual logo" class="cert-corner-logo">
-        <img src="assets/images/crest.png" alt="HiQual United Kingdom Institute crest" class="cert-crest">
-      </div>
-
-      <div class="cert-status-row">
-        <span id="statusBadge" class="status-badge status-valid"><i class="fa-solid fa-circle-check"></i> Valid</span>
-      </div>
-
-      <table class="cert-details-table">
-        <tr><td>Student Name</td><td id="valName">—</td></tr>
-        <tr><td>Father's Name</td><td id="valFather">—</td></tr>
-        <tr><td>Course Name</td><td id="valCourse">—</td></tr>
-        <tr><td>Certificate Number</td><td id="valCertNo">—</td></tr>
-        <tr><td>Issue Date</td><td id="valIssue">—</td></tr>
-        <tr><td>Date of Birth</td><td id="valDOB">—</td></tr>
-        <tr><td>Instructor</td><td id="valInstructor">—</td></tr>
-      </table>
-
-      <div class="cert-verified-stamp-wrap">
-        <img src="assets/images/verified-stamp.png" alt="Verified stamp" class="cert-verified-stamp">
-      </div>
-
-      <p class="cert-statement">
-        We hereby verify that the information provided above is accurate and corresponds to the certificate issued by HiQual UK to <strong id="stName">[Student name]</strong> on the specified date. <strong id="stName2">[Student name]</strong> has successfully completed the "<strong id="stCourse">[certificate name]</strong>" course as indicated.
-      </p>
+    <div class="detail-row">
+      <span class="detail-label">Certificate No.</span>
+      <span class="detail-value" id="valCertNo"></span>
     </div>
-
-  </div>
-</section>
-
-<!-- ================= FOOTER ================= -->
-<footer class="footer">
-  <div class="hazard-strip"></div>
-  <div class="container footer-inner">
-    <div class="footer-col">
-      <span class="brand-text light">HiQual <strong>UK Institute</strong></span>
-      <p>Professional Health, Safety &amp; Environment training and certification, based in London, United Kingdom.</p>
+    <div class="detail-row">
+      <span class="detail-label">Issue Date</span>
+      <span class="detail-value" id="valIssue"></span>
     </div>
-    <div class="footer-col">
-      <h4>Quick Links</h4>
-      <a href="index.html#about">About Us</a>
-      <a href="courses.html">Courses</a>
-      <a href="certificate.html">Verify Certificate</a>
-      <a href="index.html#contact">Contact</a>
+    <div class="detail-row">
+      <span class="detail-label">Date of Birth</span>
+      <span class="detail-value" id="valDob"></span>
     </div>
-    <div class="footer-col">
-      <h4>Legal</h4>
-      <a href="privacy.html">Privacy Policy</a>
-      <a href="terms.html">Terms &amp; Conditions</a>
-    </div>
-    <div class="footer-col">
-      <h4>Contact</h4>
-      <p><i class="fa-solid fa-phone"></i> +44 7911 120156</p>
-      <p><i class="fa-solid fa-envelope"></i> hiqual.com.uk@gmail.com</p>
-      <p><i class="fa-solid fa-location-dot"></i> Regent's Park, London, UK</p>
+    <div class="detail-row">
+      <span class="detail-label">Instructor</span>
+      <span class="detail-value" id="valInstructor"></span>
     </div>
   </div>
-  <div class="footer-bottom"><p>&copy; <span id="year"></span> HiQual United Kingdom Institute. All rights reserved.</p></div>
-</footer>
-
-<div class="floating-btns">
-  <a href="https://wa.me/447911120156" target="_blank" class="float-btn whatsapp" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
-  <a href="tel:+447911120156" class="float-btn call" aria-label="Call"><i class="fa-solid fa-phone"></i></a>
-  <a href="mailto:hiqual.com.uk@gmail.com" class="float-btn email" aria-label="Email"><i class="fa-solid fa-envelope"></i></a>
 </div>
 
-<script src="script.js"></script>
 <script src="certificate.js"></script>
 </body>
 </html>
