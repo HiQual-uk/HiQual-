@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Code Generator | HiQual UK</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  :root {
+    --hq-blue: #1d4ed8;
+    --hq-blue-dark: #142c6e;
+    --bg: #eef1f7;
+    --ink: #1f2430;
+    --muted: #6b7280;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 30px 16px 60px;
+    color: var(--ink);
+  }
+  .page {
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .corner-logo {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 34px;
+  }
+  .header {
+    text-align: center;
+    padding: 10px 0 20px;
+  }
+  .header h1 {
+    font-size: 21px;
+    margin: 6px 0 2px;
+    color: var(--hq-blue-dark);
+  }
+  .header p.subtitle {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+  .card {
+    background: #fff;
+    padding: 28px 26px;
+    border-radius: 12px;
+    box-shadow: 0 4px 18px rgba(20, 44, 110, 0.08);
+  }
+  label {
+    display: block;
+    font-size: 13.5px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  #certNoInput {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1px solid #d0d5e0;
+    border-radius: 6px;
+    font-size: 15px;
+  }
+  #certNoInput:focus { outline: 2px solid var(--hq-blue); outline-offset: 1px; }
+  #genBtn {
+    padding: 12px 20px;
+    background: var(--hq-blue);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  #genBtn:hover { background: var(--hq-blue-dark); }
+
+  .link-preview {
+    font-size: 12.5px;
+    color: var(--muted);
+    word-break: break-all;
+    background: #f6f8fc;
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 22px;
+    display: none;
+  }
+
+  .qr-result {
+    text-align: center;
+    display: none;
+  }
+  .qr-result img {
+    width: 220px;
+    height: 220px;
+    border: 1px solid #e5e9f2;
+    border-radius: 8px;
+    padding: 10px;
+    background: #fff;
+  }
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 16px;
+  }
+  .btn-secondary {
+    padding: 10px 18px;
+    background: #eef2ff;
+    color: var(--hq-blue-dark);
+    border: 1px solid #c7d2fe;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .btn-secondary:hover { background: #e0e7ff; }
+
+  .hint {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 10px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <img src="hiqual-logo.png" alt="HiQual" class="corner-logo">
+
+  <div class="header">
+    <h1>QR Code Generator</h1>
+    <p class="subtitle">Generate a scannable QR code for any certificate</p>
+  </div>
+
+  <div class="card">
+    <label for="certNoInput">Certificate Number</label>
+    <div class="input-row">
+      <input type="text" id="certNoInput" placeholder="e.g. UD65362">
+      <button id="genBtn">Generate</button>
+    </div>
+
+    <div class="link-preview" id="linkPreview"></div>
+
+    <div class="hint" id="hintText">Enter a certificate number and click Generate.</div>
+
+    <div class="qr-result" id="qrResult">
+      <img id="qrImage" src="" alt="QR Code">
+      <div class="btn-row">
+        <a href="#" id="downloadBtn" class="btn-secondary"><i class="fa-solid fa-download"></i> Download QR</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Change this if your live site URL is ever different
+  const BASE_URL = "https://hiqual-uk.github.io/HiQual-/certificate.html";
+
+  const certNoInput = document.getElementById('certNoInput');
+  const genBtn = document.getElementById('genBtn');
+  const linkPreview = document.getElementById('linkPreview');
+  const qrResult = document.getElementById('qrResult');
+  const qrImage = document.getElementById('qrImage');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const hintText = document.getElementById('hintText');
+
+  function generateQR() {
+    const certNo = certNoInput.value.trim().toUpperCase();
+    if (!certNo) {
+      hintText.textContent = "Please enter a certificate number first.";
+      qrResult.style.display = 'none';
+      linkPreview.style.display = 'none';
+      return;
+    }
+
+    const fullLink = BASE_URL + "?cert=" + encodeURIComponent(certNo);
+    const qrApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=" + encodeURIComponent(fullLink);
+
+    linkPreview.textContent = fullLink;
+    linkPreview.style.display = 'block';
+
+    qrImage.src = qrApiUrl;
+    qrResult.style.display = 'block';
+    hintText.textContent = "";
+
+    downloadBtn.setAttribute('data-cert', certNo);
+    downloadBtn.setAttribute('data-url', qrApiUrl);
+  }
+
+  genBtn.addEventListener('click', generateQR);
+  certNoInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') generateQR();
+  });
+
+  downloadBtn.addEventListener('click', async function(e) {
+    e.preventDefault();
+    const url = downloadBtn.getAttribute('data-url');
+    const certNo = downloadBtn.getAttribute('data-cert') || 'certificate';
+    if (!url) return;
+
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = certNo + '-QR.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      // Fallback: open image in new tab so user can save manually
+      window.open(url, '_blank');
+    }
+  });
+</script>
+
+</body>
+</html>
