@@ -1,38 +1,13 @@
 /* =========================================================
    certificate.js — Certificate Verification logic
    ---------------------------------------------------------
-   IMPORTANT: The data below is SAMPLE data only, so you can
-   test how the page looks and works right now.
-   In a later step, we will replace "sampleCertificates" with
-   a live connection to your Google Sheet — nothing else on
-   this page will need to change.
-
-   SheetDB column sequence (match this order in your Google Sheet):
-   Certificate Number | Student Name | Father Name | Course Name |
-   Issue Date | Date of Birth | Instructor | Status
+   This page is connected LIVE to your Google Sheet through
+   SheetDB. Any student you add in the Sheet becomes instantly
+   searchable here — no coding or re-upload needed.
    ========================================================= */
-const sampleCertificates = [
-  {
-    certNo: "HQ-2026-00123",
-    name: "Ahmed Raza",
-    father: "Muhammad Raza",
-    course: "NEBOSH IGC",
-    issueDate: "2026-05-10",
-    dob: "2004-12-17",
-    instructor: "John Hang",
-    status: "Valid"
-  },
-  {
-    certNo: "HQ-2026-00099",
-    name: "Sara Khan",
-    father: "Imran Khan",
-    course: "IOSH Managing Safely",
-    issueDate: "2023-01-15",
-    dob: "2004-12-17",
-    instructor: "John Hang",
-    status: "Expired"
-  }
-];
+
+// Your SheetDB API link (connected to "HiQual Certificates" Google Sheet)
+const SHEETDB_API_URL = "https://sheetdb.io/api/v1/nxwxkezee0ivo";
 
 function formatDate(isoDate) {
   if (!isoDate) return "N/A";
@@ -44,6 +19,8 @@ function showEmpty() {
   document.getElementById('resultEmpty').style.display = 'block';
   document.getElementById('resultNotFound').style.display = 'none';
   document.getElementById('resultFound').style.display = 'none';
+  document.getElementById('resultEmpty').innerHTML =
+    '<i class="fa-solid fa-file-shield"></i><p>Certificate details will appear here after verification.</p>';
 }
 
 function showNotFound() {
@@ -62,7 +39,7 @@ function showFound(cert) {
   document.getElementById('valCourse').textContent = cert.course;
   document.getElementById('valCertNo').textContent = cert.certNo;
   document.getElementById('valIssue').textContent = formatDate(cert.issueDate);
-  document.getElementById('valDob').textContent = cert.dob ? formatDate(cert.dob) : "N/A";
+  document.getElementById('valExpiry').textContent = cert.expiryDate ? formatDate(cert.expiryDate) : "No Expiry";
   document.getElementById('valInstructor').textContent = cert.instructor;
 
   document.getElementById('stName').textContent = cert.name;
@@ -79,14 +56,53 @@ function showFound(cert) {
   }
 }
 
-function verifyCertificate(certNo) {
+function showLoading() {
+  document.getElementById('resultEmpty').style.display = 'block';
+  document.getElementById('resultNotFound').style.display = 'none';
+  document.getElementById('resultFound').style.display = 'none';
+  document.getElementById('resultEmpty').innerHTML =
+    '<i class="fa-solid fa-spinner fa-spin"></i><p>Checking certificate, please wait...</p>';
+}
+
+// Works out Valid / Expired automatically by comparing ExpiryDate to today.
+// If ExpiryDate is empty, the certificate is treated as lifetime valid.
+function calculateStatus(expiryDate) {
+  if (!expiryDate || expiryDate.trim() === "") return "Valid";
+  const today = new Date();
+  const expiry = new Date(expiryDate);
+  return today > expiry ? "Expired" : "Valid";
+}
+
+async function verifyCertificate(certNo) {
   const cleaned = certNo.trim().toUpperCase();
   if (!cleaned) return;
 
-  const match = sampleCertificates.find(c => c.certNo.toUpperCase() === cleaned);
-  if (match) {
-    showFound(match);
-  } else {
+  showLoading();
+
+  try {
+    // Ask SheetDB to search the sheet for a matching CertificateNumber
+    const url = `${SHEETDB_API_URL}/search?CertificateNumber=${encodeURIComponent(cleaned)}`;
+    const response = await fetch(url);
+    const rows = await response.json();
+
+    if (rows && rows.length > 0) {
+      const row = rows[0];
+      const cert = {
+        certNo: row.CertificateNumber,
+        name: row.StudentName,
+        father: row.FatherName,
+        course: row.CourseName,
+        issueDate: row.IssueDate,
+        expiryDate: row.ExpiryDate,
+        instructor: row.Instructor,
+        status: calculateStatus(row.ExpiryDate)
+      };
+      showFound(cert);
+    } else {
+      showNotFound();
+    }
+  } catch (error) {
+    console.error("Verification error:", error);
     showNotFound();
   }
 }
